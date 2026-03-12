@@ -1,0 +1,84 @@
+"use client";
+
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+
+export function PreferencesSection() {
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h3 className="text-base font-medium">Preferences</h3>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Customize your experience
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-sm">Dark mode</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Use dark theme across the application
+            </p>
+          </div>
+          <Switch defaultChecked />
+        </div>
+
+        <Separator />
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-sm">Email notifications</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Receive email updates on project activity
+            </p>
+          </div>
+          <Switch defaultChecked />
+        </div>
+
+        <Separator />
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-sm">Agent notifications</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Get notified when agents complete tasks
+            </p>
+          </div>
+          <Switch defaultChecked />
+        </div>
+
+        <Separator />
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-sm">Language</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Select your preferred language
+            </p>
+          </div>
+          <Select defaultValue="en">
+            <SelectTrigger className="w-40 h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="es">Espa&ntilde;ol</SelectItem>
+              <SelectItem value="fr">Fran&ccedil;ais</SelectItem>
+              <SelectItem value="de">Deutsch</SelectItem>
+              <SelectItem value="ja">日本語</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
+}
