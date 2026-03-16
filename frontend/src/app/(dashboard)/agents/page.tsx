@@ -1,20 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Topbar } from "@/components/layout/Topbar";
 import { AgentSelector } from "@/components/chat/AgentSelector";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { agents, type Agent } from "@/lib/dummy-data";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import { MessageSquare } from "lucide-react";
 
 export default function AgentsPage() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(agents[0]);
 
+  const clientId = useMemo(
+    () => `client_${Math.random().toString(36).slice(2, 10)}`,
+    []
+  );
+  const { connected, send, on } = useWebSocket(clientId);
+
   return (
     <>
       <Topbar pageTitle="Agents" breadcrumb="TERRENE" />
       <div className="flex-1 flex overflow-hidden">
-        {/* Agent list — hidden on mobile when a chat is selected */}
         <div className="hidden md:block w-[280px] shrink-0">
           <AgentSelector
             selectedAgentId={selectedAgent?.id ?? null}
@@ -22,7 +28,6 @@ export default function AgentsPage() {
           />
         </div>
 
-        {/* Mobile agent list */}
         <div className={`md:hidden w-full ${selectedAgent ? "hidden" : ""}`}>
           <AgentSelector
             selectedAgentId={null}
@@ -30,10 +35,8 @@ export default function AgentsPage() {
           />
         </div>
 
-        {/* Chat window */}
         {selectedAgent ? (
           <div className="flex-1 flex flex-col">
-            {/* Mobile back button */}
             <button
               onClick={() => setSelectedAgent(null)}
               className="md:hidden px-4 py-2 text-xs text-muted-foreground hover:text-foreground border-b border-border/50"
@@ -41,7 +44,13 @@ export default function AgentsPage() {
               &larr; Back to agents
             </button>
             <div className="flex-1 overflow-hidden">
-              <ChatWindow agent={selectedAgent} />
+              <ChatWindow
+                agent={selectedAgent}
+                projectId="proj_001"
+                wsSend={send}
+                wsOn={on}
+                wsConnected={connected}
+              />
             </div>
           </div>
         ) : (

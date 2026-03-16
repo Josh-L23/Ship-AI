@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "next-themes";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -12,6 +13,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 export function PreferencesSection() {
+  const { theme, setTheme } = useTheme();
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -29,7 +32,12 @@ export function PreferencesSection() {
               Use dark theme across the application
             </p>
           </div>
-          <Switch defaultChecked />
+          <Switch
+            checked={theme === "dark"}
+            onCheckedChange={(checked) =>
+              setTheme(checked ? "dark" : "light")
+            }
+          />
         </div>
 
         <Separator />

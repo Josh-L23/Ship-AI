@@ -60,7 +60,7 @@ export function Topbar({ pageTitle, breadcrumb }: TopbarProps) {
 
         <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors relative">
           <Bell className="w-4 h-4" />
-          <Badge className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 text-[10px] flex items-center justify-center bg-foreground text-background border-2 border-background">
+          <Badge className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 text-[10px] flex items-center justify-center rounded-full bg-foreground text-background border-2 border-background">
             3
           </Badge>
         </button>

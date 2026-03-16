@@ -52,7 +52,7 @@ export function AgentSelector({
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium truncate">{agent.name}</p>
                   {agent.unreadCount > 0 && (
-                    <Badge className="h-5 min-w-5 px-1.5 text-[10px] bg-foreground text-background ml-2">
+                    <Badge className="h-5 min-w-5 px-1.5 text-[10px] rounded-full bg-foreground text-background ml-2">
                       {agent.unreadCount}
                     </Badge>
                   )}
