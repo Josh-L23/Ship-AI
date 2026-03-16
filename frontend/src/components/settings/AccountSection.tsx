@@ -1,11 +1,59 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export function AccountSection() {
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const handleUpdatePassword = () => {
+    setPwError("");
+    setPwSuccess(false);
+
+    if (!currentPw) {
+      setPwError("Current password is required");
+      return;
+    }
+    if (newPw.length < 6) {
+      setPwError("New password must be at least 6 characters");
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setPwError("Passwords do not match");
+      return;
+    }
+
+    // Simulate success (no real backend auth yet)
+    setPwSuccess(true);
+    setCurrentPw("");
+    setNewPw("");
+    setConfirmPw("");
+    setTimeout(() => setPwSuccess(false), 3000);
+  };
+
+  const handleDeleteAccount = () => {
+    // No real backend implementation yet — just close the dialog
+    setDeleteOpen(false);
+  };
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -20,17 +68,38 @@ export function AccountSection() {
         <div className="space-y-3">
           <div className="space-y-2">
             <Label className="text-sm">Current password</Label>
-            <Input type="password" className="h-10 max-w-md" />
+            <Input
+              type="password"
+              className="h-10 max-w-md"
+              value={currentPw}
+              onChange={(e) => setCurrentPw(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label className="text-sm">New password</Label>
-            <Input type="password" className="h-10 max-w-md" />
+            <Input
+              type="password"
+              className="h-10 max-w-md"
+              value={newPw}
+              onChange={(e) => setNewPw(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label className="text-sm">Confirm new password</Label>
-            <Input type="password" className="h-10 max-w-md" />
+            <Input
+              type="password"
+              className="h-10 max-w-md"
+              value={confirmPw}
+              onChange={(e) => setConfirmPw(e.target.value)}
+            />
           </div>
-          <Button size="sm" variant="outline">
+          {pwError && (
+            <p className="text-xs text-destructive">{pwError}</p>
+          )}
+          {pwSuccess && (
+            <p className="text-xs text-emerald-500">Password updated successfully</p>
+          )}
+          <Button size="sm" variant="outline" onClick={handleUpdatePassword}>
             Update password
           </Button>
         </div>
@@ -82,27 +151,36 @@ export function AccountSection() {
           Permanently delete your account and all associated data. This action
           cannot be undone.
         </p>
-        <Button size="sm" variant="destructive">
-          Delete account
-        </Button>
+        <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <DialogTrigger className="inline-flex items-center justify-center font-medium text-sm h-9 px-4 py-2 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">
+              Delete account
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete account</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to permanently delete your account? This
+                action cannot be undone and all your projects, messages, and
+                generated assets will be lost.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAccount}
+              >
+                Yes, delete my account
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
-  );
-}
-
-function Badge({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  variant?: string;
-  className?: string;
-}) {
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground ${className}`}
-    >
-      {children}
-    </span>
   );
 }

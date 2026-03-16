@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,11 +22,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { currentUser } from "@/lib/dummy-data";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+interface ProfileData {
+  name: string;
+  email: string;
+  bio: string;
+  avatar: string;
+  avatarUrl?: string;
+}
 
 const navItems = [
   { href: "/projects", label: "Projects", icon: FolderOpen },
@@ -42,6 +51,13 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const [profile] = useLocalStorage<ProfileData>("ship_user_profile", {
+    name: currentUser.name,
+    email: currentUser.email,
+    bio: currentUser.bio,
+    avatar: currentUser.avatar,
+    avatarUrl: undefined,
+  });
 
   return (
     <aside
@@ -119,23 +135,26 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             )}
           >
             <Avatar className="w-7 h-7">
+              {profile.avatarUrl && (
+                <AvatarImage src={profile.avatarUrl} alt={profile.name} />
+              )}
               <AvatarFallback className="text-xs bg-foreground/10">
-                {currentUser.avatar}
+                {profile.avatar}
               </AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="flex-1 text-left truncate">
                 <p className="text-sm font-medium leading-none truncate">
-                  {currentUser.name}
+                  {profile.name}
                 </p>
               </div>
             )}
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-56">
             <div className="px-2 py-1.5">
-              <p className="text-sm font-medium">{currentUser.name}</p>
+              <p className="text-sm font-medium">{profile.name}</p>
               <p className="text-xs text-muted-foreground">
-                {currentUser.email}
+                {profile.email}
               </p>
             </div>
             <DropdownMenuSeparator />

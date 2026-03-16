@@ -46,6 +46,7 @@ export function ChatWindow({
   const [isTyping, setIsTyping] = useState(false);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const actions = quickActions[agent.id] || [];
   const msgCounter = useRef(0);
 
@@ -123,8 +124,59 @@ export function ChatWindow({
     }
   };
 
+  const handleFileUpload = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileSelected = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const objectUrl = URL.createObjectURL(file);
+      msgCounter.current += 1;
+
+      if (file.type.startsWith("image/")) {
+        const userMsg: ChatMessage = {
+          id: `user_${Date.now()}_${msgCounter.current}`,
+          agentId: agent.id,
+          sender: "user",
+          content: `Shared an image: ${file.name}`,
+          timestamp: new Date().toISOString(),
+          type: "image",
+          metadata: {
+            imageUrl: objectUrl,
+          },
+        };
+        setMessages((prev) => [...prev, userMsg]);
+      } else {
+        const userMsg: ChatMessage = {
+          id: `user_${Date.now()}_${msgCounter.current}`,
+          agentId: agent.id,
+          sender: "user",
+          content: `Shared a file: ${file.name}`,
+          timestamp: new Date().toISOString(),
+          type: "text",
+        };
+        setMessages((prev) => [...prev, userMsg]);
+      }
+
+      // Reset input
+      e.target.value = "";
+    },
+    [agent.id]
+  );
+
   return (
     <div className="flex flex-col h-full">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,video/*,audio/*"
+        className="hidden"
+        onChange={handleFileSelected}
+      />
+
       <div className="px-4 md:px-6 py-3 border-b border-border/50 flex items-center gap-3">
         <AgentAvatar initials={agent.avatar} status={agent.status} size="sm" />
         <div className="flex-1 min-w-0">
@@ -172,7 +224,10 @@ export function ChatWindow({
         )}
 
         <div className="flex items-end gap-2">
-          <button className="p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors shrink-0 mb-0.5">
+          <button
+            onClick={handleFileUpload}
+            className="p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors shrink-0 mb-0.5"
+          >
             <Paperclip className="w-4 h-4" />
           </button>
 

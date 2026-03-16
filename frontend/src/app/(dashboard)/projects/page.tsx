@@ -1,10 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Topbar } from "@/components/layout/Topbar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { projects } from "@/lib/dummy-data";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { projects as defaultProjects, type Project } from "@/lib/dummy-data";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Plus, Clock, Users } from "lucide-react";
 
 const statusVariant: Record<string, "default" | "secondary" | "outline"> = {
@@ -19,7 +34,37 @@ const statusLabel: Record<string, string> = {
   draft: "Draft",
 };
 
+const EMOJIS = ["🎨", "🚀", "💎", "🌿", "⚡", "🏔️", "🌊", "🔥", "✨", "💡"];
+
 export default function ProjectsPage() {
+  const [projectsList, setProjectsList] = useLocalStorage<Project[]>(
+    "ship_projects",
+    defaultProjects
+  );
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+
+  const handleCreateProject = () => {
+    if (!newName.trim()) return;
+
+    const newProject: Project = {
+      id: `proj_${Date.now().toString(36)}`,
+      name: newName.trim(),
+      description: newDesc.trim() || "A new brand identity project",
+      status: "draft",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      thumbnail: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
+      agentActivity: 0,
+    };
+
+    setProjectsList((prev) => [newProject, ...prev]);
+    setNewName("");
+    setNewDesc("");
+    setDialogOpen(false);
+  };
+
   return (
     <>
       <Topbar pageTitle="Projects" />
@@ -34,18 +79,68 @@ export default function ProjectsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* New project card */}
-            <button className="group flex flex-col items-center justify-center min-h-[220px] rounded-xl border-2 border-dashed border-border/50 hover:border-border transition-colors bg-card/30 hover:bg-card/50">
-              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-accent transition-colors">
-                <Plus className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <p className="text-sm font-medium mt-3">New Project</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Start a brand identity
-              </p>
-            </button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger
+                className="group flex flex-col items-center justify-center min-h-[220px] rounded-xl border-2 border-dashed border-border/50 hover:border-border transition-colors bg-card/30 hover:bg-card/50"
+              >
+                  <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-accent transition-colors">
+                    <Plus className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium mt-3">New Project</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Start a brand identity
+                  </p>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create new project</DialogTitle>
+                  <DialogDescription>
+                    Start a new brand identity project. You can always update
+                    these details later.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm">Project name</Label>
+                    <Input
+                      placeholder="e.g. TERRENE, Luminary Labs..."
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleCreateProject();
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">Description (optional)</Label>
+                    <Textarea
+                      placeholder="Brief description of the brand..."
+                      value={newDesc}
+                      onChange={(e) => setNewDesc(e.target.value)}
+                      className="min-h-[80px] resize-none"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleCreateProject}
+                    disabled={!newName.trim()}
+                  >
+                    Create project
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* Project cards */}
-            {projects.map((project) => {
+            {projectsList.map((project) => {
               const updated = new Date(project.updatedAt);
               const timeAgo = getTimeAgo(updated);
 

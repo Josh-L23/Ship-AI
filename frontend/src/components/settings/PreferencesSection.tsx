@@ -11,9 +11,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+
+interface Preferences {
+  emailNotifications: boolean;
+  agentNotifications: boolean;
+  language: string;
+}
 
 export function PreferencesSection() {
   const { theme, setTheme } = useTheme();
+  const [prefs, setPrefs] = useLocalStorage<Preferences>(
+    "ship_preferences",
+    {
+      emailNotifications: true,
+      agentNotifications: true,
+      language: "en",
+    }
+  );
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -49,7 +64,12 @@ export function PreferencesSection() {
               Receive email updates on project activity
             </p>
           </div>
-          <Switch defaultChecked />
+          <Switch
+            checked={prefs.emailNotifications}
+            onCheckedChange={(checked) =>
+              setPrefs((prev) => ({ ...prev, emailNotifications: checked }))
+            }
+          />
         </div>
 
         <Separator />
@@ -61,7 +81,12 @@ export function PreferencesSection() {
               Get notified when agents complete tasks
             </p>
           </div>
-          <Switch defaultChecked />
+          <Switch
+            checked={prefs.agentNotifications}
+            onCheckedChange={(checked) =>
+              setPrefs((prev) => ({ ...prev, agentNotifications: checked }))
+            }
+          />
         </div>
 
         <Separator />
@@ -73,7 +98,12 @@ export function PreferencesSection() {
               Select your preferred language
             </p>
           </div>
-          <Select defaultValue="en">
+          <Select
+            defaultValue={prefs.language}
+            onValueChange={(val: string | null) => {
+              if (val) setPrefs((p: Preferences) => ({ ...p, language: val }));
+            }}
+          >
             <SelectTrigger className="w-40 h-9">
               <SelectValue />
             </SelectTrigger>

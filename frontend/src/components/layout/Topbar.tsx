@@ -8,7 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { projects } from "@/lib/dummy-data";
+import { projects as defaultProjects, type Project } from "@/lib/dummy-data";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 interface TopbarProps {
   pageTitle: string;
@@ -16,7 +17,11 @@ interface TopbarProps {
 }
 
 export function Topbar({ pageTitle, breadcrumb }: TopbarProps) {
-  const activeProject = projects[0];
+  const [projectsList] = useLocalStorage<Project[]>(
+    "ship_projects",
+    defaultProjects
+  );
+  const activeProject = projectsList[0];
 
   return (
     <header className="h-14 border-b border-border/50 bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-6 shrink-0 z-20">
@@ -24,12 +29,12 @@ export function Topbar({ pageTitle, breadcrumb }: TopbarProps) {
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
             <span className="truncate max-w-[120px]">
-              {activeProject.name}
+              {activeProject?.name ?? "No Project"}
             </span>
             <ChevronDown className="w-3 h-3 shrink-0" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            {projects.map((project) => (
+            {projectsList.map((project) => (
               <DropdownMenuItem key={project.id}>
                 <span className="mr-2">{project.thumbnail}</span>
                 {project.name}

@@ -28,6 +28,9 @@ interface CanvasToolbarProps {
   onZoomOut: () => void;
   onZoomIn: () => void;
   onFitView: () => void;
+  onAddNote: () => void;
+  onAddImage: () => void;
+  onUploadAsset: () => void;
 }
 
 export function CanvasToolbar({
@@ -37,6 +40,9 @@ export function CanvasToolbar({
   onZoomOut,
   onZoomIn,
   onFitView,
+  onAddNote,
+  onAddImage,
+  onUploadAsset,
 }: CanvasToolbarProps) {
   return (
     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 px-2 py-1.5 rounded-xl border border-border/60 bg-card/90 backdrop-blur-xl shadow-lg">
@@ -97,15 +103,15 @@ export function CanvasToolbar({
           <Plus className="w-4 h-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="center">
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={onAddNote}>
             <StickyNote className="w-4 h-4 mr-2" />
             Add Note
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={onAddImage}>
             <ImageIcon className="w-4 h-4 mr-2" />
             Add Image
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={onUploadAsset}>
             <Upload className="w-4 h-4 mr-2" />
             Upload Asset
           </DropdownMenuItem>

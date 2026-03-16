@@ -83,11 +83,23 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           {message.type === "image" && (
             <div className="space-y-2">
               <p>{message.content}</p>
-              <div className="w-48 h-48 bg-foreground/5 rounded-lg border border-border/30 flex items-center justify-center">
-                <span className="text-xs text-muted-foreground">
-                  [Generated Image]
-                </span>
-              </div>
+              {message.metadata?.imageUrl ? (
+                <div className="rounded-lg border border-border/30 overflow-hidden max-w-[280px]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={message.metadata.imageUrl}
+                    alt="Shared image"
+                    className="w-full h-auto object-cover"
+                    draggable={false}
+                  />
+                </div>
+              ) : (
+                <div className="w-48 h-48 bg-foreground/5 rounded-lg border border-border/30 flex items-center justify-center">
+                  <span className="text-xs text-muted-foreground">
+                    [Generated Image]
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
