@@ -1,4 +1,13 @@
-from langgraph.graph import StateGraph, END
+try:
+    from langgraph.graph import StateGraph, END
+
+    _LANGGRAPH_AVAILABLE = True
+    _LANGGRAPH_IMPORT_ERROR = ""
+except Exception as exc:  # pragma: no cover - environment-dependent fallback
+    StateGraph = None  # type: ignore[assignment]
+    END = None  # type: ignore[assignment]
+    _LANGGRAPH_AVAILABLE = False
+    _LANGGRAPH_IMPORT_ERROR = str(exc)
 
 from app.agents.state import GraphState
 from app.agents.nodes import (
@@ -60,4 +69,33 @@ def build_graph() -> StateGraph:
     return graph
 
 
-agent_graph = build_graph().compile()
+class _FallbackAgentGraph:
+    """Simple runtime fallback when LangGraph native deps are unavailable."""
+    graph_mode = "fallback"
+
+    async def ainvoke(self, state: GraphState) -> dict:
+        routed = await router_node(state)
+        agent_id = routed.get("current_agent", "agent_manager")
+        handlers = {
+            "agent_intake": intake_node,
+            "agent_market": market_node,
+            "agent_visual": visual_node,
+            "agent_production": production_node,
+            "agent_manager": manager_node,
+        }
+        handler = handlers.get(agent_id, manager_node)
+        merged_state = {**state, **routed}
+        result = await handler(merged_state)
+        return {
+            **merged_state,
+            **result,
+            "messages": [*state.get("messages", []), *result.get("messages", [])],
+            "graph_mode": self.graph_mode,
+            "graph_import_error": _LANGGRAPH_IMPORT_ERROR,
+        }
+
+
+if _LANGGRAPH_AVAILABLE:
+    agent_graph = build_graph().compile()
+else:
+    agent_graph = _FallbackAgentGraph()

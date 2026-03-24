@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -21,6 +22,8 @@ interface Preferences {
 
 export function PreferencesSection() {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [prefs, setPrefs] = useLocalStorage<Preferences>(
     "ship_preferences",
     {
@@ -48,10 +51,11 @@ export function PreferencesSection() {
             </p>
           </div>
           <Switch
-            checked={theme === "dark"}
+            checked={mounted ? theme === "dark" : false}
             onCheckedChange={(checked) =>
               setTheme(checked ? "dark" : "light")
             }
+            disabled={!mounted}
           />
         </div>
 

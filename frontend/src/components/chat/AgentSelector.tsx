@@ -5,15 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { agents, type Agent } from "@/lib/dummy-data";
+import type { Agent } from "@/lib/types";
 import { AgentAvatar } from "./AgentAvatar";
 
 interface AgentSelectorProps {
+  agents: Agent[];
   selectedAgentId: string | null;
   onSelectAgent: (agent: Agent) => void;
 }
 
 export function AgentSelector({
+  agents,
   selectedAgentId,
   onSelectAgent,
 }: AgentSelectorProps) {

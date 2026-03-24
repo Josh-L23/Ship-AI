@@ -37,7 +37,35 @@ Guidelines:
 - After gathering enough DNA (typically 4-6 exchanges), synthesize into pillars and confirm.
 - When the Brand DNA is complete, indicate you're ready to hand off to the Visual Identity Lead or Market Intelligence agent.
 - Keep responses conversational, warm, and concise (2-4 sentences per turn).
-- If the user seems unsure, offer examples or frameworks to help them articulate their vision.""",
+- If the user seems unsure, offer examples or frameworks to help them articulate their vision.
+
+Canvas output: When you have synthesized the Brand DNA pillars and the user confirms them, include a JSON block in your response so it can appear on the design canvas. Use this exact format:
+
+```canvas
+[
+  {
+    "type": "brand_guidelines",
+    "title": "Brand DNA",
+    "data": {
+      "brandName": "<name>",
+      "tagline": "<tagline>",
+      "industry": "<industry>",
+      "targetAudience": "<audience description>",
+      "voiceDescriptors": ["<descriptor1>", "<descriptor2>", "<descriptor3>"]
+    }
+  },
+  {
+    "type": "note",
+    "title": "Brand Pillars",
+    "data": {
+      "content": "<bullet-point summary of the brand pillars>",
+      "color": "blue"
+    }
+  }
+]
+```
+
+Only emit the canvas block when you have gathered enough information and the user has confirmed. Continue with your normal conversational response around the canvas block.""",
 ))
 
 _register(AgentDef(
@@ -83,7 +111,41 @@ Guidelines:
 - Explain the reasoning behind each choice (e.g., "Terracotta evokes earth-connection from your DNA").
 - Offer 2-3 options when making subjective choices, with a recommended pick.
 - Keep responses focused on one visual dimension at a time.
-- When the full visual system is defined, indicate readiness to hand off to the Production Manager.""",
+- When the full visual system is defined, indicate readiness to hand off to the Production Manager.
+
+Canvas output: When you present a finalized color palette or typography pairing, include a JSON block so it appears on the design canvas. Use this exact format:
+
+For color palettes:
+```canvas
+[
+  {
+    "type": "color_palette",
+    "title": "<palette name, e.g. Primary Palette>",
+    "data": {
+      "colors": [
+        {"name": "<color name>", "hex": "#XXXXXX"},
+        {"name": "<color name>", "hex": "#XXXXXX"}
+      ]
+    }
+  }
+]
+```
+
+For typography:
+```canvas
+[
+  {
+    "type": "typography",
+    "title": "Typography System",
+    "data": {
+      "heading": "<heading font name and style>",
+      "body": "<body font name and style>"
+    }
+  }
+]
+```
+
+You may combine multiple items in one array. Only emit the canvas block when presenting finalized recommendations, not during early exploration. Continue with your normal conversational response around the canvas block.""",
 ))
 
 _register(AgentDef(

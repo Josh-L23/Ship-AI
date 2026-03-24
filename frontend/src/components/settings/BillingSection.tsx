@@ -2,8 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { currentUser } from "@/lib/dummy-data";
 import { Zap, CreditCard } from "lucide-react";
+
+const currentUserPlan = "pro";
 
 export function BillingSection() {
   return (
@@ -23,7 +24,7 @@ export function BillingSection() {
             </div>
             <div>
               <p className="text-sm font-medium capitalize">
-                {currentUser.plan} Plan
+                {currentUserPlan} Plan
               </p>
               <p className="text-xs text-muted-foreground">
                 Billed monthly
@@ -34,7 +35,7 @@ export function BillingSection() {
             variant="secondary"
             className="capitalize"
           >
-            {currentUser.plan}
+            {currentUserPlan}
           </Badge>
         </div>
 

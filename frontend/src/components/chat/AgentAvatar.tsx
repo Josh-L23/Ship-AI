@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import type { AgentStatus } from "@/lib/dummy-data";
+import type { AgentStatus } from "@/lib/types";
 
 const statusColors: Record<AgentStatus, string> = {
   online: "bg-emerald-500",

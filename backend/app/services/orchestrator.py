@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from app.agents.graph import agent_graph
 from app.agents.state import MessageItem
 from app.services.message_service import save_message, get_messages
+from app.services.brand_spec_service import append_canvas_assets
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,15 @@ async def handle_user_message(client_id: str, payload: dict):
             "metadata": reply.get("metadata", {}),
             "timestamp": saved.timestamp.isoformat(),
         })
+
+        canvas_assets = reply.get("metadata", {}).get("canvas_assets")
+        if canvas_assets:
+            await append_canvas_assets(project_id, canvas_assets)
+            await manager.send_event(client_id, "canvas_update", {
+                "project_id": project_id,
+                "agent_id": reply["agent_id"],
+                "assets": canvas_assets,
+            })
 
     await manager.send_event(client_id, "agent_typing", {
         "agent_id": agent_id,

@@ -63,8 +63,20 @@ async def websocket_endpoint(ws: WebSocket, client_id: str):
             if event == "ping":
                 await manager.send_event(client_id, "pong", {})
             elif event == "user_message":
-                from app.services.orchestrator import handle_user_message
-                await handle_user_message(client_id, payload)
+                try:
+                    from app.services.orchestrator import handle_user_message
+
+                    await handle_user_message(client_id, payload)
+                except Exception:
+                    logger.exception("Failed to process user_message event")
+                    await manager.send_event(
+                        client_id,
+                        "error",
+                        {
+                            "message": "Agent pipeline failed to initialize or execute.",
+                            "code": "pipeline_error",
+                        },
+                    )
             else:
                 await manager.send_event(client_id, "error", {"message": f"Unknown event: {event}", "code": "unknown_event"})
 

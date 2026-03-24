@@ -21,7 +21,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { currentUser } from "@/lib/dummy-data";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   Tooltip,
@@ -36,6 +35,13 @@ interface ProfileData {
   avatar: string;
   avatarUrl?: string;
 }
+
+const defaultUserProfile = {
+  name: "Alex Morgan",
+  email: "alex.morgan@example.com",
+  bio: "Brand strategist & creative director.",
+  avatar: "AM",
+};
 
 const navItems = [
   { href: "/projects", label: "Projects", icon: FolderOpen },
@@ -52,10 +58,10 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const [profile] = useLocalStorage<ProfileData>("ship_user_profile", {
-    name: currentUser.name,
-    email: currentUser.email,
-    bio: currentUser.bio,
-    avatar: currentUser.avatar,
+    name: defaultUserProfile.name,
+    email: defaultUserProfile.email,
+    bio: defaultUserProfile.bio,
+    avatar: defaultUserProfile.avatar,
     avatarUrl: undefined,
   });
 

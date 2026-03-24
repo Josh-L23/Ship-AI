@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
 from app.routers import websocket, projects, messages
+from app.schemas import AgentOut
 
 logging.basicConfig(level=logging.INFO)
 
@@ -14,6 +15,12 @@ logging.basicConfig(level=logging.INFO)
 async def lifespan(app: FastAPI):
     await init_db()
     logging.info("Database initialized")
+    try:
+        # Fail fast on broken agent stack imports instead of crashing on first WS message.
+        from app.agents.graph import agent_graph as _graph  # noqa: F401
+        logging.info("Agent graph import check passed")
+    except Exception:
+        logging.exception("Agent graph import check failed")
     yield
 
 
@@ -41,7 +48,22 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/api/agents")
+@app.get("/api/health/deps")
+async def health_deps():
+    try:
+        from app.agents.graph import agent_graph as _graph  # noqa: F401
+        mode = getattr(_graph, "graph_mode", "langgraph")
+        return {
+            "status": "ok",
+            "deps": "ready",
+            "graph_mode": mode,
+            "graph_impl": type(_graph).__name__,
+        }
+    except Exception as exc:
+        return {"status": "error", "deps": "failed", "error": str(exc)}
+
+
+@app.get("/api/agents", response_model=list[AgentOut])
 async def list_agents():
     from app.agents.registry import list_agents as _list
     return [

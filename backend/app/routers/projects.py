@@ -1,9 +1,11 @@
+import json
+
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.models import Project
+from app.models import Project, BrandSpec
 from app.schemas import ProjectCreate, ProjectUpdate, ProjectOut
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -56,3 +58,46 @@ async def delete_project(project_id: str, db: AsyncSession = Depends(get_session
         raise HTTPException(404, "Project not found")
     await db.delete(project)
     await db.commit()
+
+
+@router.get("/{project_id}/brand-spec")
+async def get_brand_spec(project_id: str, db: AsyncSession = Depends(get_session)):
+    project = await db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    record = await db.scalar(
+        select(BrandSpec).where(BrandSpec.project_id == project_id)
+    )
+    if not record:
+        return {"project_id": project_id, "spec": {}}
+
+    try:
+        spec = json.loads(record.spec_json or "{}")
+    except json.JSONDecodeError:
+        spec = {}
+    return {"project_id": project_id, "spec": spec}
+
+
+@router.put("/{project_id}/brand-spec")
+async def upsert_brand_spec(
+    project_id: str,
+    body: dict,
+    db: AsyncSession = Depends(get_session),
+):
+    project = await db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    spec_payload = body.get("spec", body)
+    record = await db.scalar(
+        select(BrandSpec).where(BrandSpec.project_id == project_id)
+    )
+    if record:
+        record.spec_json = json.dumps(spec_payload)
+    else:
+        record = BrandSpec(project_id=project_id, spec_json=json.dumps(spec_payload))
+        db.add(record)
+    await db.commit()
+    await db.refresh(record)
+    return {"project_id": project_id, "spec": spec_payload}

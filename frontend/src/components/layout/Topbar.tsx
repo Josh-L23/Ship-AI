@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Bell, Search, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -8,8 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { projects as defaultProjects, type Project } from "@/lib/dummy-data";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { fetchProjects } from "@/lib/api";
+import type { Project } from "@/lib/types";
 
 interface TopbarProps {
   pageTitle: string;
@@ -17,10 +18,23 @@ interface TopbarProps {
 }
 
 export function Topbar({ pageTitle, breadcrumb }: TopbarProps) {
-  const [projectsList] = useLocalStorage<Project[]>(
-    "ship_projects",
-    defaultProjects
-  );
+  const [projectsList, setProjectsList] = useState<Project[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetchProjects()
+      .then((rows) => {
+        if (!active) return;
+        setProjectsList(rows);
+      })
+      .catch(() => {
+        if (!active) return;
+        setProjectsList([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   const activeProject = projectsList[0];
 
   return (

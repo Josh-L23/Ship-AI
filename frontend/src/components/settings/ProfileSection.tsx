@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { currentUser } from "@/lib/dummy-data";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Camera, Check } from "lucide-react";
 
@@ -18,16 +17,18 @@ interface ProfileData {
   avatarUrl?: string;
 }
 
+const defaultProfile: ProfileData = {
+  name: "Alex Morgan",
+  email: "alex.morgan@example.com",
+  bio: "Brand strategist & creative director.",
+  avatar: "AM",
+  avatarUrl: undefined,
+};
+
 export function ProfileSection() {
   const [profile, setProfile] = useLocalStorage<ProfileData>(
     "ship_user_profile",
-    {
-      name: currentUser.name,
-      email: currentUser.email,
-      bio: currentUser.bio,
-      avatar: currentUser.avatar,
-      avatarUrl: undefined,
-    }
+    defaultProfile
   );
   const [saved, setSaved] = useState(false);
 

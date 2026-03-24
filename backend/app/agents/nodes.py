@@ -1,26 +1,67 @@
+import json
+import re
+import logging
+
 from app.agents.state import GraphState, MessageItem
 from app.agents.registry import get_agent, AGENTS
 from app.llm import get_llm_provider
+
+logger = logging.getLogger(__name__)
+
+_CANVAS_BLOCK_RE = re.compile(r"```canvas\s*\n(.*?)```", re.DOTALL)
+
+
+def _extract_canvas_assets(text: str) -> tuple[str, list[dict]]:
+    """Extract ```canvas JSON blocks from the response.
+
+    Returns the cleaned text (blocks removed) and a list of parsed asset dicts.
+    """
+    assets: list[dict] = []
+    for match in _CANVAS_BLOCK_RE.finditer(text):
+        try:
+            parsed = json.loads(match.group(1))
+            if isinstance(parsed, list):
+                assets.extend(parsed)
+            elif isinstance(parsed, dict):
+                assets.append(parsed)
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse canvas block: %s", match.group(1)[:120])
+
+    cleaned = _CANVAS_BLOCK_RE.sub("", text).strip()
+    return cleaned, assets
 
 
 async def _agent_node(state: GraphState, agent_id: str) -> dict:
     """Generic agent node: calls LLM with agent's system prompt and conversation history."""
     agent_def = get_agent(agent_id)
-    llm = get_llm_provider()
+    llm = get_llm_provider(agent_id)
 
     chat_history = [
         {"sender": m["sender"], "content": m["content"]}
         for m in state["messages"]
     ]
 
-    response_text = await llm.generate(agent_def.system_prompt, chat_history)
+    try:
+        response_text = await llm.generate(agent_def.system_prompt, chat_history)
+    except Exception:
+        logger.exception("Primary provider failed for %s, falling back to mock", agent_id)
+        from app.llm.mock import MockProvider
+
+        fallback = MockProvider()
+        response_text = await fallback.generate(agent_def.system_prompt, chat_history)
+
+    cleaned_text, canvas_assets = _extract_canvas_assets(response_text)
+
+    metadata: dict = {}
+    if canvas_assets:
+        metadata["canvas_assets"] = canvas_assets
 
     new_message: MessageItem = {
         "sender": agent_id,
         "agent_id": agent_id,
-        "content": response_text,
+        "content": cleaned_text or response_text,
         "message_type": "text",
-        "metadata": {},
+        "metadata": metadata,
     }
 
     return {

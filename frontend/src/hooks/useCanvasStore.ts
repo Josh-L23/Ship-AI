@@ -1,11 +1,11 @@
 "use client";
 
-import { createContext, useContext, useCallback } from "react";
-import { useLocalStorage } from "./useLocalStorage";
-import { canvasAssets, type CanvasAsset } from "@/lib/dummy-data";
+import { createContext, useContext, useCallback, useEffect, useMemo, useState } from "react";
+import type { CanvasAsset } from "@/lib/types";
 
 export interface CanvasStore {
   assets: CanvasAsset[];
+  setAssets: (assets: CanvasAsset[]) => void;
   addNode: (
     type: CanvasAsset["type"],
     data?: Partial<CanvasAsset["data"]>,
@@ -81,8 +81,16 @@ function getDefaultTitle(type: CanvasAsset["type"]): string {
   }
 }
 
-export function useCanvasStoreProvider(): CanvasStore {
-  const [assets, setAssets] = useLocalStorage<CanvasAsset[]>("ship_canvas_assets", canvasAssets);
+export function useCanvasStoreProvider(initialAssets: CanvasAsset[] = []): CanvasStore {
+  const [assets, setAssetsState] = useState<CanvasAsset[]>(initialAssets);
+
+  useEffect(() => {
+    setAssetsState(initialAssets);
+  }, [initialAssets]);
+
+  const setAssets = useCallback((nextAssets: CanvasAsset[]) => {
+    setAssetsState(nextAssets);
+  }, []);
 
   const addNode = useCallback(
     (
@@ -102,15 +110,15 @@ export function useCanvasStoreProvider(): CanvasStore {
         },
         data: { ...getDefaultData(type), ...data },
       };
-      setAssets((prev) => [...prev, newAsset]);
+      setAssetsState((prev) => [...prev, newAsset]);
       return id;
     },
-    [setAssets]
+    []
   );
 
   const updateNode = useCallback(
     (id: string, patch: Partial<Pick<CanvasAsset, "title" | "data">>) => {
-      setAssets((prev) =>
+      setAssetsState((prev) =>
         prev.map((a) =>
           a.id === id
             ? {
@@ -122,26 +130,29 @@ export function useCanvasStoreProvider(): CanvasStore {
         )
       );
     },
-    [setAssets]
+    []
   );
 
   const deleteNode = useCallback(
     (id: string) => {
-      setAssets((prev) => prev.filter((a) => a.id !== id));
+      setAssetsState((prev) => prev.filter((a) => a.id !== id));
     },
-    [setAssets]
+    []
   );
 
   const updateNodePosition = useCallback(
     (id: string, position: { x: number; y: number }) => {
-      setAssets((prev) =>
+      setAssetsState((prev) =>
         prev.map((a) => (a.id === id ? { ...a, position } : a))
       );
     },
-    [setAssets]
+    []
   );
 
-  return { assets, addNode, updateNode, deleteNode, updateNodePosition };
+  return useMemo(
+    () => ({ assets, setAssets, addNode, updateNode, deleteNode, updateNodePosition }),
+    [assets, setAssets, addNode, updateNode, deleteNode, updateNodePosition]
+  );
 }
 
 const CanvasStoreContext = createContext<CanvasStore | null>(null);

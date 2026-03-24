@@ -84,7 +84,14 @@ class MessageOut(BaseModel):
     sender: str
     content: str
     message_type: str
-    metadata_json: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
     timestamp: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AgentOut(BaseModel):
+    id: str
+    name: str
+    role: str
+    description: str

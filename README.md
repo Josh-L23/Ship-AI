@@ -1,59 +1,56 @@
-# SHIP AI (Autonomous Branding Engine) 🚀
+# SHIP AI
 
-[FastAPI](https://fastapi.tiangolo.com/) • [Next.js](https://nextjs.org/) • [LangGraph](https://langchain-ai.github.io/langgraph/) • [SQLite](https://sqlite.org/) • [Gemini](https://deepmind.google/technologies/gemini/)
+SHIP AI is a full-stack application for building and iterating brand identity projects with a multi-agent workflow.  
+The platform combines a Next.js frontend, a FastAPI backend, WebSocket-based chat, and persistent project data.
 
-**SHIP AI** is a multi-agent system for automating brand creation. It transforms brief ideas into structured, production-ready brand identities.
+## Current Project Scope
 
-## 🌟 Vision
+- Create and manage branding projects.
+- Chat with specialized agents (intake, market, visual, production, manager).
+- Store project messages and evolving brand data.
+- Visualize outputs on a canvas workspace.
+- Run with either a mock LLM provider or a real provider through environment configuration.
 
-Democratize high-end brand strategy and design by delivering an autonomous engine that turns inspiration into validated, cohesive, market-ready Brand Identity Objects (BIO).
+## System Overview
 
-## 🤖 Agentic Workflow
+### Core Components
 
-1. Intake Architect: Conversational Brand DNA → `BrandSpec`.
-2. Naming & Market Intelligence: trademark/search validation.
-3. Visual Identity Lead: create visual prompts, raster+vector pipeline.
-4. Production Manager: compile BIO to pitch deck + mockups.
+- `frontend/`: Next.js application for dashboard, chat, and canvas interaction.
+- `backend/`: FastAPI service for APIs, WebSocket events, orchestration, and persistence.
+- `backend/storage/`: local SQLite data store used in development.
 
-## 🏗 Architecture
+### Runtime Flow
 
-### Brand Identity Object (BIO)
+1. The frontend sends user messages to the backend over WebSocket.
+2. The backend validates input, persists the message, and invokes the agent graph.
+3. Agent responses are persisted and sent back to the frontend.
+4. The frontend updates chat and, when applicable, canvas state.
 
-- UUID
-- Visuals: colors, typography, SVG paths
-- Narrative: name, tagline, tone
-- Assets: local PDFs, vector logos
+## Repository Layout
 
-### Vectorization
+```text
+SHIP ai/
+├── README.md
+├── frontend/
+│   └── README.md
+└── backend/
+    ├── BACKEND.md
+    └── app/
+```
 
-Raster → vector using `vtracer`/`potrace` for print-ready logos.
+## Local Development
 
-## 📂 Directory
-
-- `backend/`
-  - `app/main.py`
-  - `app/agents/`
-  - `app/services/`
-  - `app/models.py`
-  - `storage/`
-  - `.env`
-- `frontend/`
-  - `src/`
-  - `package.json`
-
-## 🛠 Install
-
-### Backend
+### 1) Backend
 
 ```bash
 cd backend
 python -m venv venv
-.\venv\Scripts\activate
-pip install fastapi uvicorn langgraph sqlalchemy vtracer
-uvicorn app.main:app --reload
+venv\Scripts\activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-### Frontend
+### 2) Frontend
 
 ```bash
 cd frontend
@@ -61,21 +58,35 @@ npm install
 npm run dev
 ```
 
-## 🗺 Roadmap
+Frontend default URL: `http://localhost:3000`  
+Backend default URL: `http://localhost:8000`
 
-- Phase 1: Brand DNA intake
-- Phase 2: Gemini 2.5 + image generation
-- Phase 3: SVG engine (vtracer)
-- Phase 4: Marp-based PDFs
-- Phase 5: logo mockups
+## Configuration Notes
 
-## Contribute
+- Backend runtime settings are managed through `backend/.env`.
+- Frontend environment values are managed through `frontend/.env.local`.
+- LLM provider selection is controlled on the backend (`LLM_PROVIDER` and provider-specific keys).
 
-1. Fork
-2. branch
-3. PR
-4. review
+## Documentation Map
 
-## License
+- Frontend details: `frontend/README.md`
+- Backend details: `backend/BACKEND.md`
 
-MIT
+## Development Guidelines
+
+- Keep frontend concerns in frontend docs and code modules.
+- Keep backend protocol, orchestration, and persistence concerns in backend docs and modules.
+- Use checklists below as the source of truth for unfinished cross-cutting work.
+
+## General App Functionality Checklist
+
+- [ ] End-to-end authentication and authorization across frontend and backend.
+- [ ] Persistent, server-synced canvas state per project.
+- [ ] Streaming agent responses in the chat experience.
+- [ ] Consistent error handling and user-facing error states across all routes.
+- [ ] Production-ready deployment setup (containerization, environment separation, secrets handling).
+- [ ] Automated test coverage for critical frontend and backend flows.
+- [ ] Basic observability (structured logs, request tracing, health/metrics visibility).
+- [ ] Finalized asset lifecycle (upload, generation, storage, retrieval, download).
+- [ ] Stable API and event contract versioning for frontend-backend compatibility.
+- [ ] Contributor workflow polish (CI checks, contribution guidelines, release notes process).

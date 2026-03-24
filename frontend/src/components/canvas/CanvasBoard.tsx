@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import ReactFlow, {
   Background,
   MiniMap,
@@ -19,7 +19,9 @@ import {
   CanvasStoreProvider,
   type CanvasStore,
 } from "@/hooks/useCanvasStore";
-import type { CanvasAsset } from "@/lib/dummy-data";
+import { canvasAssetsFromSpec, fetchBrandSpec, saveBrandSpec } from "@/lib/api";
+import type { CanvasAsset } from "@/lib/types";
+import { canvasEvents } from "@/lib/canvas-events";
 import { ColorPaletteCard } from "./ColorPaletteCard";
 import { ImageCard } from "./ImageCard";
 import { NoteCard } from "./NoteCard";
@@ -117,13 +119,42 @@ function assetToNode(asset: CanvasAsset, store: CanvasStore): Node {
   }
 }
 
-function CanvasBoardInner() {
-  const store = useCanvasStoreProvider();
+interface CanvasBoardInnerProps {
+  projectId: string;
+}
+
+function CanvasBoardInner({ projectId }: CanvasBoardInnerProps) {
+  const [initialAssets, setInitialAssets] = useState<CanvasAsset[]>([]);
+  const [assetsReady, setAssetsReady] = useState(false);
+  const store = useCanvasStoreProvider(initialAssets);
+  const storeRef = useRef(store);
+  storeRef.current = store;
+
+  useEffect(() => {
+    let active = true;
+    setAssetsReady(false);
+    fetchBrandSpec(projectId)
+      .then(({ spec }) => {
+        if (!active) return;
+        setInitialAssets(canvasAssetsFromSpec(spec));
+      })
+      .catch(() => {
+        if (!active) return;
+        setInitialAssets([]);
+      })
+      .finally(() => {
+        if (!active) return;
+        setAssetsReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [projectId]);
 
   const initialNodes = useMemo(
     () => store.assets.map((a) => assetToNode(a, store)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [store.assets]
+    []
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -133,11 +164,56 @@ function CanvasBoardInner() {
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (!assetsReady) return;
+    const timer = setTimeout(() => {
+      void saveBrandSpec(projectId, { canvasAssets: store.assets });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [assetsReady, projectId, store.assets]);
+
   // Keep nodes in sync when store.assets changes (add/delete/update)
-  useMemo(() => {
-    setNodes(store.assets.map((a) => assetToNode(a, store)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.assets]);
+  // Uses diff-based approach to preserve React Flow's internal positions
+  useEffect(() => {
+    const s = storeRef.current;
+    setNodes((currentNodes) => {
+      const storeIds = new Set(s.assets.map((a) => a.id));
+      const currentIds = new Set(currentNodes.map((n) => n.id));
+
+      const kept = currentNodes.filter((n) => storeIds.has(n.id));
+      const newAssets = s.assets.filter((a) => !currentIds.has(a.id));
+      const newNodes = newAssets.map((a) => assetToNode(a, s));
+
+      const updated = kept.map((n) => {
+        const asset = s.assets.find((a) => a.id === n.id);
+        if (!asset) return n;
+        const fresh = assetToNode(asset, s);
+        return { ...fresh, position: n.position };
+      });
+
+      return [...updated, ...newNodes];
+    });
+  }, [store.assets, setNodes]);
+
+  // Subscribe to canvas events from agent conversations
+  useEffect(() => {
+    return canvasEvents.subscribe((assets) => {
+      let offsetY = 0;
+      for (const asset of assets) {
+        const pos = asset.position ?? {
+          x: 100 + Math.random() * 300,
+          y: 100 + offsetY,
+        };
+        storeRef.current.addNode(
+          asset.type as CanvasAsset["type"],
+          asset.data,
+          asset.title,
+          pos
+        );
+        offsetY += 250;
+      }
+    });
+  }, []);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -295,6 +371,10 @@ function CanvasBoardInner() {
   );
 }
 
-export function CanvasBoard() {
-  return <CanvasBoardInner />;
+interface CanvasBoardProps {
+  projectId: string;
+}
+
+export function CanvasBoard({ projectId }: CanvasBoardProps) {
+  return <CanvasBoardInner projectId={projectId} />;
 }

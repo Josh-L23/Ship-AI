@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Topbar } from "@/components/layout/Topbar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,8 +18,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { projects as defaultProjects, type Project } from "@/lib/dummy-data";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { createProject, fetchProjects } from "@/lib/api";
+import type { Project } from "@/lib/types";
 import { Plus, Clock, Users } from "lucide-react";
 
 const statusVariant: Record<string, "default" | "secondary" | "outline"> = {
@@ -37,32 +37,49 @@ const statusLabel: Record<string, string> = {
 const EMOJIS = ["🎨", "🚀", "💎", "🌿", "⚡", "🏔️", "🌊", "🔥", "✨", "💡"];
 
 export default function ProjectsPage() {
-  const [projectsList, setProjectsList] = useLocalStorage<Project[]>(
-    "ship_projects",
-    defaultProjects
-  );
+  const [projectsList, setProjectsList] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
 
-  const handleCreateProject = () => {
+  useEffect(() => {
+    let active = true;
+    fetchProjects()
+      .then((rows) => {
+        if (!active) return;
+        setProjectsList(rows);
+      })
+      .catch(() => {
+        if (!active) return;
+        setProjectsList([]);
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleCreateProject = async () => {
     if (!newName.trim()) return;
 
-    const newProject: Project = {
-      id: `proj_${Date.now().toString(36)}`,
-      name: newName.trim(),
-      description: newDesc.trim() || "A new brand identity project",
-      status: "draft",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      thumbnail: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
-      agentActivity: 0,
-    };
-
-    setProjectsList((prev) => [newProject, ...prev]);
-    setNewName("");
-    setNewDesc("");
-    setDialogOpen(false);
+    try {
+      const created = await createProject({
+        name: newName.trim(),
+        description: newDesc.trim() || "A new brand identity project",
+      });
+      created.thumbnail = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+      setProjectsList((prev) => [created, ...prev]);
+      setNewName("");
+      setNewDesc("");
+      setDialogOpen(false);
+    } catch {
+      // no-op for now; page keeps existing state
+    }
   };
 
   return (
@@ -147,7 +164,7 @@ export default function ProjectsPage() {
               return (
                 <Link
                   key={project.id}
-                  href="/canvas"
+                  href={`/canvas?projectId=${project.id}`}
                   className="group rounded-xl border border-border/50 bg-card/50 hover:bg-card/80 hover:border-border/80 transition-all duration-200 overflow-hidden"
                 >
                   <div className="h-28 bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center text-4xl">
@@ -188,6 +205,11 @@ export default function ProjectsPage() {
                 </Link>
               );
             })}
+            {!loading && projectsList.length === 0 && (
+              <div className="col-span-full rounded-xl border border-border/50 bg-card/30 p-6 text-sm text-muted-foreground">
+                No projects yet. Create your first project to start generating assets.
+              </div>
+            )}
           </div>
         </div>
       </ScrollArea>

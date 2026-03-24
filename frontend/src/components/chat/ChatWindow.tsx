@@ -6,11 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  type Agent,
-  type ChatMessage,
-  chatMessages as dummyMessages,
-} from "@/lib/dummy-data";
+import { fetchMessages } from "@/lib/api";
+import { type Agent, type ChatMessage } from "@/lib/types";
 import { AgentAvatar } from "./AgentAvatar";
 import { MessageBubble } from "./MessageBubble";
 import { TypingIndicator } from "./TypingIndicator";
@@ -36,13 +33,12 @@ const quickActions: Record<string, string[]> = {
 
 export function ChatWindow({
   agent,
-  projectId = "proj_001",
+  projectId,
   wsSend,
   wsOn,
   wsConnected,
 }: ChatWindowProps) {
-  const fallback = dummyMessages[agent.id] || [];
-  const [messages, setMessages] = useState<ChatMessage[]>(fallback);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -51,10 +47,28 @@ export function ChatWindow({
   const msgCounter = useRef(0);
 
   useEffect(() => {
-    setMessages(dummyMessages[agent.id] || []);
+    let active = true;
+    if (!projectId) {
+      setMessages([]);
+      return;
+    }
+
+    fetchMessages(projectId)
+      .then((history) => {
+        if (!active) return;
+        setMessages(history.filter((msg) => msg.agentId === agent.id));
+      })
+      .catch(() => {
+        if (!active) return;
+        setMessages([]);
+      });
+
     setIsTyping(false);
     setInput("");
-  }, [agent.id]);
+    return () => {
+      active = false;
+    };
+  }, [agent.id, projectId]);
 
   useEffect(() => {
     if (!wsOn) return;
@@ -77,14 +91,29 @@ export function ChatWindow({
         if (data.agent_id !== agent.id) return;
         setIsTyping(data.is_typing as boolean);
       }),
+      wsOn("error", (data) => {
+        setIsTyping(false);
+        const errorMsg: ChatMessage = {
+          id: `error_${Date.now()}`,
+          agentId: agent.id,
+          sender: "agent",
+          content: `Something went wrong: ${data.message ?? "Unknown error"}`,
+          timestamp: new Date().toISOString(),
+          type: "text",
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+      }),
     ];
 
     return () => unsubs.forEach((u) => u());
   }, [agent.id, wsOn]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const viewport = scrollRef.current?.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    );
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
     }
   }, [messages, isTyping]);
 
@@ -105,7 +134,7 @@ export function ChatWindow({
       setMessages((prev) => [...prev, userMsg]);
       setInput("");
 
-      if (wsSend && wsConnected) {
+      if (projectId && wsSend && wsConnected) {
         wsSend("user_message", {
           project_id: projectId,
           agent_id: agent.id,
@@ -198,7 +227,7 @@ export function ChatWindow({
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-4 md:px-6" ref={scrollRef}>
+      <ScrollArea className="flex-1 min-h-0 px-4 md:px-6" ref={scrollRef}>
         <div className="py-4 space-y-4">
           {messages.map((msg) => (
             <MessageBubble key={msg.id} message={msg} />
