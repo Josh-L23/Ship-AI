@@ -26,10 +26,12 @@ class Settings(BaseSettings):
     agent_manager_model: str = ""
 
     database_url: str = "sqlite+aiosqlite:///./storage/ship_ai.db"
+    supabase_url: str = ""
 
     model_config = {
         "env_file": str(Path(__file__).resolve().parent.parent / ".env"),
         "env_file_encoding": "utf-8",
+        "extra": "ignore",
     }
 
     def provider_for_agent(self, agent_id: str) -> str:

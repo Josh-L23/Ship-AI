@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Query
 
-from app.schemas import MessageOut
+from app.schemas import MessageOut, SendMessageRequest, SendMessageResponse
 from app.services.message_service import get_messages
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
@@ -36,3 +36,16 @@ async def list_messages(
         }
         for m in messages
     ]
+
+
+@router.post("/{project_id}", response_model=SendMessageResponse)
+async def send_message(project_id: str, body: SendMessageRequest):
+    from app.services.orchestrator import handle_user_message
+
+    result = await handle_user_message(
+        project_id=project_id,
+        agent_id=body.agent_id,
+        content=body.content,
+        message_type=body.message_type,
+    )
+    return result

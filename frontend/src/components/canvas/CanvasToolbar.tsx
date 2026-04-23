@@ -8,6 +8,7 @@ import {
   ImageIcon,
   Upload,
   Map,
+  FileDown,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -20,10 +21,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { downloadBrandGuidelines } from "@/lib/api";
 
 interface CanvasToolbarProps {
   zoom: number;
   showMinimap: boolean;
+  projectId: string;
   onToggleMinimap: () => void;
   onZoomOut: () => void;
   onZoomIn: () => void;
@@ -36,6 +39,7 @@ interface CanvasToolbarProps {
 export function CanvasToolbar({
   zoom,
   showMinimap,
+  projectId,
   onToggleMinimap,
   onZoomOut,
   onZoomIn,
@@ -117,6 +121,18 @@ export function CanvasToolbar({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <div className="w-px h-5 bg-border/60 mx-1" />
+
+      <Tooltip>
+        <TooltipTrigger
+          onClick={() => downloadBrandGuidelines(projectId)}
+          className="p-2 rounded-lg hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground"
+        >
+          <FileDown className="w-4 h-4" />
+        </TooltipTrigger>
+        <TooltipContent side="top">Download Brand Guidelines PDF</TooltipContent>
+      </Tooltip>
     </div>
   );
 }

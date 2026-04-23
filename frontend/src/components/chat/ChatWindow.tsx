@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { fetchMessages } from "@/lib/api";
+import {
+  fetchMessages,
+  sendMessage as apiSendMessage,
+  checkLlmHealth,
+} from "@/lib/api";
+import { canvasEvents } from "@/lib/canvas-events";
 import { type Agent, type ChatMessage } from "@/lib/types";
 import { AgentAvatar } from "./AgentAvatar";
 import { MessageBubble } from "./MessageBubble";
@@ -15,12 +20,6 @@ import { TypingIndicator } from "./TypingIndicator";
 interface ChatWindowProps {
   agent: Agent;
   projectId?: string;
-  wsSend?: (event: string, data: Record<string, unknown>) => void;
-  wsOn?: (
-    event: string,
-    handler: (data: Record<string, unknown>) => void
-  ) => () => void;
-  wsConnected?: boolean;
 }
 
 const quickActions: Record<string, string[]> = {
@@ -31,20 +30,30 @@ const quickActions: Record<string, string[]> = {
   agent_manager: ["Project status", "Timeline estimate", "Reassign task"],
 };
 
-export function ChatWindow({
-  agent,
-  projectId,
-  wsSend,
-  wsOn,
-  wsConnected,
-}: ChatWindowProps) {
+export function ChatWindow({ agent, projectId }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [input, setInput] = useState("");
+  const [llmWarning, setLlmWarning] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const actions = quickActions[agent.id] || [];
   const msgCounter = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    checkLlmHealth().then((h) => {
+      if (!active) return;
+      if (h.status !== "ok") {
+        setLlmWarning(h.detail || "LLM provider not configured");
+      } else {
+        setLlmWarning(null);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -71,44 +80,6 @@ export function ChatWindow({
   }, [agent.id, projectId]);
 
   useEffect(() => {
-    if (!wsOn) return;
-
-    const unsubs = [
-      wsOn("agent_message", (data) => {
-        if (data.agent_id !== agent.id) return;
-        const msg: ChatMessage = {
-          id: (data.message_id as string) || `live_${Date.now()}`,
-          agentId: data.agent_id as string,
-          sender: "agent",
-          content: data.content as string,
-          timestamp: (data.timestamp as string) || new Date().toISOString(),
-          type: (data.message_type as ChatMessage["type"]) || "text",
-          metadata: (data.metadata as ChatMessage["metadata"]) || undefined,
-        };
-        setMessages((prev) => [...prev, msg]);
-      }),
-      wsOn("agent_typing", (data) => {
-        if (data.agent_id !== agent.id) return;
-        setIsTyping(data.is_typing as boolean);
-      }),
-      wsOn("error", (data) => {
-        setIsTyping(false);
-        const errorMsg: ChatMessage = {
-          id: `error_${Date.now()}`,
-          agentId: agent.id,
-          sender: "agent",
-          content: `Something went wrong: ${data.message ?? "Unknown error"}`,
-          timestamp: new Date().toISOString(),
-          type: "text",
-        };
-        setMessages((prev) => [...prev, errorMsg]);
-      }),
-    ];
-
-    return () => unsubs.forEach((u) => u());
-  }, [agent.id, wsOn]);
-
-  useEffect(() => {
     const viewport = scrollRef.current?.querySelector<HTMLElement>(
       '[data-slot="scroll-area-viewport"]'
     );
@@ -117,9 +88,9 @@ export function ChatWindow({
     }
   }, [messages, isTyping]);
 
-  const sendMessage = useCallback(
-    (text: string) => {
-      if (!text.trim()) return;
+  const handleSendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim() || !projectId) return;
 
       msgCounter.current += 1;
       const userMsg: ChatMessage = {
@@ -133,23 +104,41 @@ export function ChatWindow({
 
       setMessages((prev) => [...prev, userMsg]);
       setInput("");
+      setIsTyping(true);
 
-      if (projectId && wsSend && wsConnected) {
-        wsSend("user_message", {
-          project_id: projectId,
+      try {
+        const result = await apiSendMessage(projectId, {
           agent_id: agent.id,
           content: text.trim(),
           message_type: "text",
         });
+
+        setMessages((prev) => [...prev, ...result.replies]);
+
+        if (result.canvasAssets?.length) {
+          canvasEvents.emit(result.canvasAssets);
+        }
+      } catch {
+        const errorMsg: ChatMessage = {
+          id: `error_${Date.now()}`,
+          agentId: agent.id,
+          sender: "agent",
+          content: "Something went wrong. Please try again.",
+          timestamp: new Date().toISOString(),
+          type: "text",
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+      } finally {
+        setIsTyping(false);
       }
     },
-    [agent.id, projectId, wsSend, wsConnected]
+    [agent.id, projectId]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(input);
+      handleSendMessage(input);
     }
   };
 
@@ -190,7 +179,6 @@ export function ChatWindow({
         setMessages((prev) => [...prev, userMsg]);
       }
 
-      // Reset input
       e.target.value = "";
     },
     [agent.id]
@@ -213,19 +201,17 @@ export function ChatWindow({
           <p className="text-xs text-muted-foreground">{agent.role}</p>
         </div>
         <div className="flex items-center gap-2">
-          {wsConnected !== undefined && (
-            <span
-              className={`w-2 h-2 rounded-full ${
-                wsConnected ? "bg-emerald-500" : "bg-gray-400"
-              }`}
-              title={wsConnected ? "Connected" : "Disconnected"}
-            />
-          )}
           <Badge variant="secondary" className="text-[10px] capitalize">
             {agent.status}
           </Badge>
         </div>
       </div>
+
+      {llmWarning && (
+        <div className="mx-4 md:mx-6 mt-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-xs text-yellow-700 dark:text-yellow-400">
+          {llmWarning}
+        </div>
+      )}
 
       <ScrollArea className="flex-1 min-h-0 px-4 md:px-6" ref={scrollRef}>
         <div className="py-4 space-y-4">
@@ -243,7 +229,7 @@ export function ChatWindow({
             {actions.map((action) => (
               <button
                 key={action}
-                onClick={() => sendMessage(action)}
+                onClick={() => handleSendMessage(action)}
                 className="shrink-0 px-3 py-1.5 rounded-full border border-border/60 text-xs text-muted-foreground hover:text-foreground hover:border-border transition-colors"
               >
                 {action}
@@ -274,7 +260,7 @@ export function ChatWindow({
           <Button
             size="icon"
             className="shrink-0 w-10 h-10 rounded-lg mb-0.5"
-            onClick={() => sendMessage(input)}
+            onClick={() => handleSendMessage(input)}
           >
             <Send className="w-4 h-4" />
           </Button>

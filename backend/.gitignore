@@ -1,12 +1,17 @@
-# Virtual environment
+# Virtual environment (see repo root .gitignore for .venv-win and variants)
 venv/
 .venv/
+.venv-*/
+.venv*/
 env/
+ENV/
 
-# Environment and secrets
+# Environment and secrets (root .gitignore also applies)
 .env
 .env.local
 *.env
+!.env.example
+!.env.sample
 
 # Python
 __pycache__/
@@ -20,12 +25,11 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -43,7 +47,7 @@ storage/*.db-journal
 storage/*.db-wal
 storage/*.db-shm
 
-# IDE / OS
+# IDE / OS (redundant with root; kept for standalone backend usage)
 .idea/
 .vscode/
 *.swp

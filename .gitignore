@@ -1,0 +1,81 @@
+# --- Secrets & local environment (never commit) ---
+.env
+**/.env
+!**/.env.example
+!**/.env.sample
+.env.local
+**/.env.local
+.env.*.local
+**/.env.*.local
+*.pem
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Virtual environments (all common layouts)
+.venv/
+.venv-*/
+.venv*/
+venv/
+env/
+ENV/
+backend/.venv-win/
+
+# --- Node / Next.js ---
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+.npm/
+.pnp.*
+yarn-error.log*
+npm-debug.log*
+*.tsbuildinfo
+
+# --- Local data & DB ---
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+backend/storage/*.db
+backend/storage/*.db-journal
+backend/storage/*.db-wal
+backend/storage/*.db-shm
+
+# --- IDE & OS ---
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Logs & debug ---
+*.log
+logs/
+debug-*.log

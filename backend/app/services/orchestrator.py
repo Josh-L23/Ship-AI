@@ -1,32 +1,28 @@
 import logging
-from datetime import datetime, timezone
+
+from fastapi import HTTPException
 
 from app.agents.graph import agent_graph
 from app.agents.state import MessageItem
+from app.schemas import CanvasAsset
 from app.services.message_service import save_message, get_messages
-from app.services.brand_spec_service import append_canvas_assets
+from app.services.brand_spec_service import get_brand_spec, append_canvas_assets
 
 logger = logging.getLogger(__name__)
 
 
-async def handle_user_message(client_id: str, payload: dict):
+async def handle_user_message(
+    project_id: str,
+    agent_id: str = "agent_manager",
+    content: str = "",
+    message_type: str = "text",
+) -> dict:
     """
     Full pipeline: persist user message -> invoke LangGraph -> persist agent
-    response -> push back through WebSocket.
+    responses -> return replies and canvas assets.
     """
-    from app.routers.websocket import manager
-
-    project_id = payload.get("project_id", "")
-    agent_id = payload.get("agent_id", "agent_manager")
-    content = payload.get("content", "")
-    message_type = payload.get("message_type", "text")
-
     if not project_id or not content:
-        await manager.send_event(client_id, "error", {
-            "message": "project_id and content are required",
-            "code": "validation_error",
-        })
-        return
+        raise HTTPException(status_code=422, detail="project_id and content are required")
 
     await save_message(
         project_id=project_id,
@@ -35,11 +31,6 @@ async def handle_user_message(client_id: str, payload: dict):
         content=content,
         message_type=message_type,
     )
-
-    await manager.send_event(client_id, "agent_typing", {
-        "agent_id": agent_id,
-        "is_typing": True,
-    })
 
     history = await get_messages(project_id)
     message_items: list[MessageItem] = [
@@ -53,11 +44,13 @@ async def handle_user_message(client_id: str, payload: dict):
         for m in history
     ]
 
+    brand_spec = await get_brand_spec(project_id)
+
     graph_input = {
         "project_id": project_id,
         "messages": message_items,
         "current_agent": agent_id,
-        "brand_spec": {},
+        "brand_spec": brand_spec,
         "pending_handoff": "",
     }
 
@@ -65,18 +58,13 @@ async def handle_user_message(client_id: str, payload: dict):
         result = await agent_graph.ainvoke(graph_input)
     except Exception as e:
         logger.exception("LangGraph invocation failed")
-        await manager.send_event(client_id, "agent_typing", {
-            "agent_id": agent_id,
-            "is_typing": False,
-        })
-        await manager.send_event(client_id, "error", {
-            "message": str(e),
-            "code": "graph_error",
-        })
-        return
+        raise HTTPException(status_code=502, detail=str(e))
 
     new_messages = result.get("messages", [])
     agent_replies = [m for m in new_messages if m["sender"] != "user" and m not in message_items]
+
+    replies = []
+    all_canvas_assets = []
 
     for reply in agent_replies:
         saved = await save_message(
@@ -88,26 +76,30 @@ async def handle_user_message(client_id: str, payload: dict):
             metadata=reply.get("metadata", {}),
         )
 
-        await manager.send_event(client_id, "agent_message", {
+        replies.append({
+            "id": saved.id,
             "project_id": project_id,
             "agent_id": reply["agent_id"],
-            "message_id": saved.id,
+            "sender": "agent",
             "content": reply["content"],
             "message_type": reply.get("message_type", "text"),
             "metadata": reply.get("metadata", {}),
             "timestamp": saved.timestamp.isoformat(),
         })
 
-        canvas_assets = reply.get("metadata", {}).get("canvas_assets")
-        if canvas_assets:
-            await append_canvas_assets(project_id, canvas_assets)
-            await manager.send_event(client_id, "canvas_update", {
-                "project_id": project_id,
-                "agent_id": reply["agent_id"],
-                "assets": canvas_assets,
-            })
+        raw_assets = reply.get("metadata", {}).get("canvas_assets")
+        if raw_assets:
+            validated = []
+            for raw in raw_assets:
+                try:
+                    validated.append(CanvasAsset(**raw))
+                except Exception:
+                    logger.warning("Dropped invalid canvas asset: %s", str(raw)[:120])
+            if validated:
+                await append_canvas_assets(project_id, [a.model_dump() for a in validated])
+                all_canvas_assets.extend(validated)
 
-    await manager.send_event(client_id, "agent_typing", {
-        "agent_id": agent_id,
-        "is_typing": False,
-    })
+    return {
+        "replies": replies,
+        "canvas_assets": all_canvas_assets if all_canvas_assets else None,
+    }

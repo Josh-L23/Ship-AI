@@ -1,4 +1,5 @@
 import type { Agent, CanvasAsset, ChatMessage, Project } from "@/lib/types";
+import type { CanvasAssetPayload } from "@/lib/canvas-events";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -120,12 +121,72 @@ export async function saveBrandSpec(
   projectId: string,
   spec: Record<string, unknown>
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/brand-spec`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ spec }),
-  });
+  const res = await fetch(
+    `${API_BASE}/api/projects/${projectId}/brand-spec`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spec }),
+    }
+  );
   if (!res.ok) throw new Error("Failed to save brand spec");
+}
+
+export function downloadBrandGuidelines(projectId: string): void {
+  window.open(
+    `${API_BASE}/api/projects/${projectId}/brand-guidelines.pdf`,
+    "_blank"
+  );
+}
+
+export async function checkLlmHealth(): Promise<{
+  status: string;
+  provider?: string;
+  detail?: string;
+}> {
+  try {
+    const res = await fetch(`${API_BASE}/api/health/llm`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return { status: "error", detail: "Health check failed" };
+    return await res.json();
+  } catch {
+    return { status: "error", detail: "Backend unreachable" };
+  }
+}
+
+export async function sendMessage(
+  projectId: string,
+  payload: { agent_id: string; content: string; message_type?: string }
+): Promise<{ replies: ChatMessage[]; canvasAssets?: CanvasAssetPayload[] }> {
+  const res = await fetch(`${API_BASE}/api/messages/${projectId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      agent_id: payload.agent_id,
+      content: payload.content,
+      message_type: payload.message_type ?? "text",
+    }),
+  });
+  if (!res.ok) throw new Error("Failed to send message");
+
+  const data = (await res.json()) as {
+    replies: BackendMessage[];
+    canvas_assets?: CanvasAssetPayload[];
+  };
+
+  return {
+    replies: data.replies.map((msg) => ({
+      id: msg.id,
+      agentId: msg.agent_id,
+      sender: msg.sender,
+      content: msg.content,
+      timestamp: msg.timestamp,
+      type: msg.message_type || "text",
+      metadata: msg.metadata as ChatMessage["metadata"],
+    })),
+    canvasAssets: data.canvas_assets ?? undefined,
+  };
 }
 
 export function canvasAssetsFromSpec(spec: Record<string, unknown>): CanvasAsset[] {

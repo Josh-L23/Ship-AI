@@ -10,8 +10,8 @@ The frontend is responsible for:
 - Rendering dashboard routes and UI components.
 - Managing user interactions with chat and project views.
 - Maintaining client-side state for canvas and local preferences.
-- Connecting to backend REST and WebSocket interfaces.
-- Translating backend events into clear UI updates.
+- Connecting to backend REST endpoints.
+- Translating backend responses into clear UI updates.
 
 The frontend is not responsible for:
 
@@ -43,7 +43,6 @@ Create `frontend/.env.local` and define at least:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_WS_URL=ws://localhost:8000
 ```
 
 If not set, code may fall back to local defaults depending on implementation.
@@ -69,7 +68,6 @@ frontend/
 │   │   ├── settings/
 │   │   └── ui/
 │   ├── hooks/
-│   │   ├── useWebSocket.ts
 │   │   ├── useCanvasStore.ts
 │   │   └── useLocalStorage.ts
 │   └── lib/
@@ -90,14 +88,14 @@ frontend/
 
 ### Chat Flow
 
-- `ChatWindow` sends `user_message` events over WebSocket.
-- Incoming `agent_message` and `agent_typing` events update visible conversation state.
-- Agent-specific selectors control which conversation context is active.
+- `ChatWindow` sends user messages via `POST /api/messages/{projectId}`.
+- The backend processes the message through the agent graph and returns replies synchronously.
+- Agent replies and any canvas asset updates are handled from the response body.
 
 ### Canvas Flow
 
 - Canvas nodes are managed through `useCanvasStore`.
-- Canvas updates can come from user actions or backend-driven events.
+- Canvas updates can come from user actions or agent responses that include canvas assets.
 - `canvas-events.ts` enables cross-route communication for incoming asset updates.
 
 ### Local Persistence
@@ -105,25 +103,14 @@ frontend/
 - Lightweight UI state persists through local storage hooks.
 - This persistence improves local continuity but is not the final source of truth.
 
-## API and WebSocket Integration
+## API Integration
 
-### REST Usage
-
-The frontend consumes backend project and message endpoints for:
+The frontend consumes backend REST endpoints for:
 
 - Project listing and lifecycle operations.
 - Message history retrieval per project/agent context.
-
-### WebSocket Usage
-
-Endpoint pattern: `ws://localhost:8000/ws/{clientId}`
-
-Common event types:
-
-- Outbound: `user_message`, `ping`
-- Inbound: `agent_message`, `agent_typing`, `canvas_update`, `error`, `pong`
-
-The frontend should treat backend event payloads as authoritative for real-time agent output.
+- Sending user messages and receiving agent replies (`POST /api/messages/{projectId}`).
+- Brand spec read/write operations.
 
 ## Development Scripts
 
@@ -140,13 +127,12 @@ The frontend should treat backend event payloads as authoritative for real-time 
 
 ## Frontend Outstanding Tasks Checklist
 
-- [ ] Replace remaining mock/dummy data paths with API-backed data loading.
-- [ ] Add token-by-token chat rendering support for streaming responses.
-- [ ] Implement authenticated session handling and protected routes.
-- [ ] Persist canvas node edits to backend and restore from backend on load.
-- [ ] Improve WebSocket reconnection UX with clear user status indicators.
-- [ ] Add robust empty/error/loading states across dashboard routes.
-- [ ] Introduce integration tests for chat, projects, and canvas flows.
-- [ ] Add accessibility pass for keyboard flow, focus management, and semantic roles.
-- [ ] Add upload and asset management UI aligned with backend storage endpoints.
-- [ ] Finalize frontend build/runtime config for production environments.
+- Replace remaining mock/dummy data paths with API-backed data loading.
+- Add token-by-token chat rendering support for streaming responses (SSE).
+- Implement authenticated session handling and protected routes.
+- Persist canvas node edits to backend and restore from backend on load.
+- Add robust empty/error/loading states across dashboard routes.
+- Introduce integration tests for chat, projects, and canvas flows.
+- Add accessibility pass for keyboard flow, focus management, and semantic roles.
+- Add upload and asset management UI aligned with backend storage endpoints.
+- Finalize frontend build/runtime config for production environments.

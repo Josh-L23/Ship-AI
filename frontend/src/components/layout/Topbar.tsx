@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Bell, Search, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,23 +20,33 @@ interface TopbarProps {
 
 export function Topbar({ pageTitle, breadcrumb }: TopbarProps) {
   const [projectsList, setProjectsList] = useState<Project[]>([]);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentProjectId = searchParams.get("projectId");
 
   useEffect(() => {
     let active = true;
     fetchProjects()
       .then((rows) => {
-        if (!active) return;
-        setProjectsList(rows);
+        if (active) setProjectsList(rows);
       })
       .catch(() => {
-        if (!active) return;
-        setProjectsList([]);
+        if (active) setProjectsList([]);
       });
     return () => {
       active = false;
     };
   }, []);
-  const activeProject = projectsList[0];
+
+  const activeProject =
+    projectsList.find((p) => p.id === currentProjectId) ?? projectsList[0];
+
+  const handleSelectProject = (project: Project) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("projectId", project.id);
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   return (
     <header className="h-14 border-b border-border/50 bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-6 shrink-0 z-20">
@@ -49,7 +60,10 @@ export function Topbar({ pageTitle, breadcrumb }: TopbarProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             {projectsList.map((project) => (
-              <DropdownMenuItem key={project.id}>
+              <DropdownMenuItem
+                key={project.id}
+                onClick={() => handleSelectProject(project)}
+              >
                 <span className="mr-2">{project.thumbnail}</span>
                 {project.name}
               </DropdownMenuItem>

@@ -8,11 +8,26 @@ from app.llm import get_llm_provider
 
 logger = logging.getLogger(__name__)
 
-_CANVAS_BLOCK_RE = re.compile(r"```canvas\s*\n(.*?)```", re.DOTALL)
+_CANVAS_BLOCK_RE = re.compile(r"```(?:canvas|json)\s*\n(.*?)```", re.DOTALL)
+
+_VALID_ASSET_TYPES = {"color_palette", "image", "note", "typography", "brand_guidelines", "media"}
+
+
+def _coerce_asset(raw: dict) -> dict | None:
+    if not isinstance(raw, dict):
+        return None
+    asset_type = raw.get("type", "")
+    if asset_type not in _VALID_ASSET_TYPES:
+        return None
+    return {
+        "type": asset_type,
+        "title": str(raw.get("title", "")),
+        "data": raw.get("data") if isinstance(raw.get("data"), dict) else {},
+    }
 
 
 def _extract_canvas_assets(text: str) -> tuple[str, list[dict]]:
-    """Extract ```canvas JSON blocks from the response.
+    """Extract ```canvas / ```json blocks containing canvas assets.
 
     Returns the cleaned text (blocks removed) and a list of parsed asset dicts.
     """
@@ -20,12 +35,27 @@ def _extract_canvas_assets(text: str) -> tuple[str, list[dict]]:
     for match in _CANVAS_BLOCK_RE.finditer(text):
         try:
             parsed = json.loads(match.group(1))
-            if isinstance(parsed, list):
-                assets.extend(parsed)
-            elif isinstance(parsed, dict):
-                assets.append(parsed)
         except json.JSONDecodeError:
             logger.warning("Failed to parse canvas block: %s", match.group(1)[:120])
+            continue
+
+        items: list = []
+        if isinstance(parsed, list):
+            items = parsed
+        elif isinstance(parsed, dict):
+            if "canvasAssets" in parsed and isinstance(parsed["canvasAssets"], list):
+                items = parsed["canvasAssets"]
+            elif "type" in parsed:
+                items = [parsed]
+            else:
+                continue
+
+        for item in items:
+            coerced = _coerce_asset(item)
+            if coerced:
+                assets.append(coerced)
+            else:
+                logger.warning("Dropped invalid canvas item: %s", str(item)[:120])
 
     cleaned = _CANVAS_BLOCK_RE.sub("", text).strip()
     return cleaned, assets

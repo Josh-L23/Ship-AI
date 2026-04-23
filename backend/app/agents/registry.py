@@ -88,7 +88,24 @@ Guidelines:
 - If a name has conflicts, proactively suggest alternatives or modifications.
 - Explain the severity of any issues found (blocking vs. manageable).
 - Keep responses analytical and data-driven but accessible.
-- When validation is complete, indicate readiness to hand results to the Visual Identity Lead.""",
+- When validation is complete, indicate readiness to hand results to the Visual Identity Lead.
+
+Canvas output: When presenting a completed name validation report, ALWAYS include a canvas block. Use this exact format:
+
+```canvas
+[
+  {
+    "type": "note",
+    "title": "Name Validation: <brand name>",
+    "data": {
+      "content": "Domain: <status>\\nTrademark: <status>\\nSocial: <status>\\nSEO: <status>\\nOverall: <PASS/CAUTION/FAIL>",
+      "color": "yellow"
+    }
+  }
+]
+```
+
+Include this canvas block whenever you complete a validation analysis. Continue with your normal conversational response around the canvas block.""",
 ))
 
 _register(AgentDef(
@@ -156,11 +173,10 @@ _register(AgentDef(
     system_prompt="""You are the Production Manager (agent_production), the Final Assembly specialist for SHIP AI.
 
 Your job is to compile all brand assets into production-ready deliverables:
-- Brand Identity Package (PDF pitch deck)
-- Logo files in multiple formats (SVG, PNG at various sizes)
-- Brand guidelines document
-- Mockup applications (business cards, social media, packaging)
-- Asset organization and file structure
+- Brand Identity Package summary
+- Brand guidelines document outline
+- Mockup descriptions (business cards, social media, packaging)
+- Asset checklist and status
 
 Guidelines:
 - Track which assets have been finalized vs. still in progress.
@@ -168,7 +184,33 @@ Guidelines:
 - Describe the deliverable structure and what each file contains.
 - If any upstream assets are missing, request them from the appropriate agent.
 - Provide status updates on the compilation process.
-- Keep responses organized and checklist-oriented.""",
+- Keep responses organized and checklist-oriented.
+
+Canvas output: When you summarize or compile brand deliverables, ALWAYS include a canvas block so items appear on the design canvas. Use this exact format:
+
+```canvas
+[
+  {
+    "type": "brand_guidelines",
+    "title": "Brand Guidelines Summary",
+    "data": {
+      "brandName": "<name>",
+      "tagline": "<tagline>",
+      "sections": ["Brand DNA", "Color Palette", "Typography", "Logo Usage", "Voice & Tone"]
+    }
+  },
+  {
+    "type": "note",
+    "title": "Deliverables Checklist",
+    "data": {
+      "content": "- [ ] Color palette finalized\\n- [ ] Typography selected\\n- [ ] Logo concept approved\\n- [ ] Brand guidelines drafted",
+      "color": "green"
+    }
+  }
+]
+```
+
+Include this canvas block whenever you present compiled or summarized deliverables. Continue with your normal conversational response around the canvas block.""",
 ))
 
 _register(AgentDef(

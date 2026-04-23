@@ -1,27 +1,39 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Topbar } from "@/components/layout/Topbar";
 import { AgentSelector } from "@/components/chat/AgentSelector";
 import { ChatWindow } from "@/components/chat/ChatWindow";
-import { useWebSocket } from "@/hooks/useWebSocket";
-import { canvasEvents, type CanvasAssetPayload } from "@/lib/canvas-events";
-import { fetchAgents } from "@/lib/api";
+import { fetchAgents, fetchProjects } from "@/lib/api";
 import type { Agent } from "@/lib/types";
 import { MessageSquare } from "lucide-react";
 
 export default function AgentsPage() {
   const searchParams = useSearchParams();
-  const projectId = searchParams.get("projectId") || "proj_001";
+  const projectIdParam = searchParams.get("projectId");
+  const [projectId, setProjectId] = useState<string | null>(projectIdParam);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
 
-  const clientId = useMemo(
-    () => `client_${Math.random().toString(36).slice(2, 10)}`,
-    []
-  );
-  const { connected, send, on } = useWebSocket(clientId);
+  useEffect(() => {
+    if (projectIdParam) {
+      setProjectId(projectIdParam);
+      return;
+    }
+    let active = true;
+    fetchProjects()
+      .then((projects) => {
+        if (!active) return;
+        if (projects.length > 0) {
+          setProjectId(projects[0].id);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [projectIdParam]);
 
   useEffect(() => {
     let active = true;
@@ -45,18 +57,9 @@ export default function AgentsPage() {
     };
   }, []);
 
-  useEffect(() => {
-    return on("canvas_update", (data) => {
-      const assets = data.assets as CanvasAssetPayload[] | undefined;
-      if (assets?.length) {
-        canvasEvents.emit(assets);
-      }
-    });
-  }, [on]);
-
   return (
     <>
-      <Topbar pageTitle="Agents" breadcrumb={projectId} />
+      <Topbar pageTitle="Agents" breadcrumb={projectId ?? ""} />
       <div className="flex-1 flex overflow-hidden">
         <div className="hidden md:block w-[280px] shrink-0">
           <AgentSelector
@@ -74,7 +77,7 @@ export default function AgentsPage() {
           />
         </div>
 
-        {selectedAgent ? (
+        {selectedAgent && projectId ? (
           <div className="flex-1 flex flex-col">
             <button
               onClick={() => setSelectedAgent(null)}
@@ -86,9 +89,6 @@ export default function AgentsPage() {
               <ChatWindow
                 agent={selectedAgent}
                 projectId={projectId}
-                wsSend={send}
-                wsOn={on}
-                wsConnected={connected}
               />
             </div>
           </div>

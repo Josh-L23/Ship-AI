@@ -1,59 +1,10 @@
 from datetime import datetime
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
 
-# ---------- WebSocket event wrappers ----------
-
-class WSEvent(BaseModel):
-    event: str
-    data: dict[str, Any] = {}
-
-
-# ---------- Client -> Server ----------
-
-class UserMessageData(BaseModel):
-    project_id: str
-    agent_id: str
-    content: str
-    message_type: str = "text"
-
-
-# ---------- Server -> Client ----------
-
-class AgentMessageData(BaseModel):
-    project_id: str
-    agent_id: str
-    message_id: str
-    content: str
-    message_type: str = "text"
-    metadata: dict[str, Any] = {}
-    timestamp: str
-
-
-class AgentTypingData(BaseModel):
-    agent_id: str
-    is_typing: bool
-
-
-class AgentStatusData(BaseModel):
-    agent_id: str
-    status: Literal["online", "busy", "offline"]
-
-
-class AgentHandoffData(BaseModel):
-    from_agent: str
-    to_agent: str
-    reason: str = ""
-
-
-class ErrorData(BaseModel):
-    message: str
-    code: str = "unknown"
-
-
-# ---------- REST schemas ----------
+# ---------- REST schemas: Projects ----------
 
 class ProjectCreate(BaseModel):
     name: str
@@ -77,6 +28,14 @@ class ProjectOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ---------- REST schemas: Messages ----------
+
+class SendMessageRequest(BaseModel):
+    agent_id: str = "agent_manager"
+    content: str
+    message_type: str = "text"
+
+
 class MessageOut(BaseModel):
     id: str
     project_id: str
@@ -89,6 +48,25 @@ class MessageOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
+class CanvasAssetPosition(BaseModel):
+    x: float = 0
+    y: float = 0
+
+
+class CanvasAsset(BaseModel):
+    type: str
+    title: str = ""
+    data: dict[str, Any] = Field(default_factory=dict)
+    position: Optional[CanvasAssetPosition] = None
+
+
+class SendMessageResponse(BaseModel):
+    replies: list[dict[str, Any]]
+    canvas_assets: Optional[list[CanvasAsset]] = None
+
+
+# ---------- REST schemas: Agents ----------
 
 class AgentOut(BaseModel):
     id: str

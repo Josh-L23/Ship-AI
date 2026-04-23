@@ -358,6 +358,7 @@ function CanvasBoardInner({ projectId }: CanvasBoardInnerProps) {
         <CanvasToolbar
           zoom={zoom}
           showMinimap={showMinimap}
+          projectId={projectId}
           onToggleMinimap={() => setShowMinimap(!showMinimap)}
           onZoomOut={() => flowInstance?.zoomOut({ duration: 200 })}
           onZoomIn={() => flowInstance?.zoomIn({ duration: 200 })}

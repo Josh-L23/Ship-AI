@@ -1,6 +1,8 @@
+import io
 import json
 
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -101,3 +103,35 @@ async def upsert_brand_spec(
     await db.commit()
     await db.refresh(record)
     return {"project_id": project_id, "spec": spec_payload}
+
+
+@router.get("/{project_id}/brand-guidelines.pdf")
+async def download_brand_guidelines(
+    project_id: str, db: AsyncSession = Depends(get_session)
+):
+    from app.services.pdf_service import generate_brand_guidelines_pdf
+
+    project = await db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    record = await db.scalar(
+        select(BrandSpec).where(BrandSpec.project_id == project_id)
+    )
+    spec = {}
+    if record:
+        try:
+            spec = json.loads(record.spec_json or "{}")
+        except json.JSONDecodeError:
+            spec = {}
+
+    pdf_bytes = generate_brand_guidelines_pdf(project.name, spec)
+    safe_name = project.name.replace(" ", "_")
+
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}_Brand_Guidelines.pdf"',
+        },
+    )
